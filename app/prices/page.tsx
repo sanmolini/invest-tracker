@@ -5,7 +5,7 @@ import { PriceUpdateForm } from '@/components/prices/PriceUpdateForm'
 export const revalidate = 0
 
 export default async function PricesPage() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const [investRes, txRes, snapRes] = await Promise.all([
     supabase.from('investments').select('*').eq('is_active', true).order('type'),
     supabase.from('transactions').select('*'),

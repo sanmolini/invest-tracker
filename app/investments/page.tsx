@@ -11,7 +11,7 @@ import { PlusCircle, ChevronRight } from 'lucide-react'
 export const revalidate = 0
 
 export default async function InvestmentsPage() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const [investRes, txRes, snapRes] = await Promise.all([
     supabase.from('investments').select('*').order('created_at', { ascending: false }),
     supabase.from('transactions').select('*'),

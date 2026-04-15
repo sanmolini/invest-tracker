@@ -13,7 +13,7 @@ import clsx from 'clsx'
 export const revalidate = 0
 
 export default async function InvestmentDetailPage({ params }: { params: { id: string } }) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const [invRes, txRes, snapRes] = await Promise.all([
     supabase.from('investments').select('*').eq('id', params.id).single(),
     supabase.from('transactions').select('*').eq('investment_id', params.id).order('date', { ascending: false }),

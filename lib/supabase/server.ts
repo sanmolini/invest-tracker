@@ -1,9 +1,8 @@
 import { createServerClient as createSSRClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
-// Auth-aware server client (reads/writes cookies — for middleware & auth checks)
-export async function createAuthClient() {
+// Single client factory: uses the user's session cookie so RLS is enforced
+export async function createServerClient() {
   const cookieStore = await cookies()
   return createSSRClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,10 +20,5 @@ export async function createAuthClient() {
   )
 }
 
-// Service-role client for data fetching (bypasses RLS, no cookies needed)
-export function createServerClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+// Alias kept for auth-specific usage
+export const createAuthClient = createServerClient

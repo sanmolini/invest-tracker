@@ -11,7 +11,7 @@ export interface SnapshotInput {
 }
 
 export async function saveSnapshot(data: SnapshotInput) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('price_snapshots')
     .upsert({
@@ -28,7 +28,7 @@ export async function saveSnapshot(data: SnapshotInput) {
 }
 
 export async function saveMultipleSnapshots(snapshots: SnapshotInput[]) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const rows = snapshots.map(s => ({

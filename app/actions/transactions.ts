@@ -15,7 +15,7 @@ export interface CreateTransactionInput {
 }
 
 export async function createTransaction(data: CreateTransactionInput) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Compute amount from units * price if provided
   const amount = data.units && data.unit_price
@@ -40,7 +40,6 @@ export async function createTransaction(data: CreateTransactionInput) {
 
   // If unit-based and has price, auto-create snapshot
   if (data.units && data.unit_price) {
-    // Get all buy transactions to compute total units
     const { data: allTx } = await supabase
       .from('transactions')
       .select('*')
@@ -67,7 +66,7 @@ export async function createTransaction(data: CreateTransactionInput) {
 }
 
 export async function deleteTransaction(id: string, investment_id: string) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase.from('transactions').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/')

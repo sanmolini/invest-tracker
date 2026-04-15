@@ -17,7 +17,7 @@ import Link from 'next/link'
 export const revalidate = 0
 
 export default async function DashboardPage() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Fetch all data in parallel
   const [investRes, txRes, snapRes] = await Promise.all([

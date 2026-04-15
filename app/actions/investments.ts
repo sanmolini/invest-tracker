@@ -14,7 +14,7 @@ export interface CreateInvestmentInput {
 }
 
 export async function createInvestment(data: CreateInvestmentInput) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
@@ -40,7 +40,7 @@ export async function createInvestment(data: CreateInvestmentInput) {
 }
 
 export async function updateInvestment(id: string, data: Partial<CreateInvestmentInput>) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('investments')
     .update({ ...data, ticker: data.ticker || null, notes: data.notes || null })
@@ -53,7 +53,7 @@ export async function updateInvestment(id: string, data: Partial<CreateInvestmen
 }
 
 export async function deleteInvestment(id: string) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase.from('investments').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/')
@@ -61,7 +61,7 @@ export async function deleteInvestment(id: string) {
 }
 
 export async function toggleInvestmentActive(id: string, is_active: boolean) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase.from('investments').update({ is_active }).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/')
