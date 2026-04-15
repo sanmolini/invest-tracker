@@ -16,18 +16,12 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [user, setUser] = useState<{ email?: string; avatar?: string; name?: string } | null>(null)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser({
-          email: data.user.email,
-          avatar: data.user.user_metadata?.avatar_url,
-          name: data.user.user_metadata?.full_name,
-        })
-      }
+      if (data.user) setUser({ email: data.user.email })
     })
   }, [])
 
@@ -93,20 +87,11 @@ export function Sidebar() {
       <div className="px-3 py-4 border-t border-bg-border space-y-2">
         {user && (
           <div className="flex items-center gap-2.5 px-3 py-2">
-            {user.avatar ? (
-              <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full flex-shrink-0" />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-brand/20 flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">
-                {user.name?.[0] ?? user.email?.[0] ?? '?'}
-              </div>
-            )}
+            <div className="w-7 h-7 rounded-full bg-brand/20 flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">
+              {user.email?.[0]?.toUpperCase() ?? '?'}
+            </div>
             <div className="min-w-0">
-              <div className="text-xs font-medium text-text-primary truncate">
-                {user.name ?? user.email}
-              </div>
-              {user.name && (
-                <div className="text-[10px] text-text-muted truncate">{user.email}</div>
-              )}
+              <div className="text-xs font-medium text-text-primary truncate">{user.email}</div>
             </div>
           </div>
         )}
