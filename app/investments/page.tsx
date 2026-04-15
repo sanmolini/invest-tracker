@@ -97,13 +97,13 @@ export default async function InvestmentsPage() {
                 <div className="divide-y divide-bg-border">
                   {invs.map(inv => (
                     <div key={inv.id}
-                      className="flex items-center gap-4 px-5 py-4 hover:bg-bg-elevated/40 transition-colors group">
+                      className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-elevated/40 transition-colors group">
                       {/* Color dot */}
                       <div className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ background: typeInfo.color }} />
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Link href={`/investments/${inv.id}`}
                             className="font-medium text-sm text-text-primary hover:text-brand transition-colors">
                             {inv.name}
@@ -114,18 +114,15 @@ export default async function InvestmentsPage() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5">
-                          <span>Invertido: <span className="font-mono">{formatCurrency(inv.total_invested, inv.currency)}</span></span>
+                        <div className="hidden sm:flex items-center gap-3 text-xs text-text-muted mt-0.5">
+                          <span>Inv: <span className="font-mono">{formatCurrency(inv.total_invested, inv.currency)}</span></span>
                           {inv.total_units !== null && (
                             <span>{formatUnits(inv.total_units)} u</span>
-                          )}
-                          {inv.current_unit_price !== null && (
-                            <span>@ <span className="font-mono">{formatCurrency(inv.current_unit_price, inv.currency)}</span></span>
                           )}
                         </div>
                       </div>
 
-                      <div className="text-right min-w-[90px]">
+                      <div className="text-right shrink-0">
                         <div className="font-mono font-semibold text-sm text-text-primary">
                           {formatCurrency(inv.current_value, inv.currency)}
                         </div>
@@ -138,7 +135,7 @@ export default async function InvestmentsPage() {
 
                       <PnlBadge value={inv.pnl_percent} size="sm" />
 
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <Link href={`/investments/${inv.id}`} className="btn-ghost py-1 px-2 text-xs">
                           <ChevronRight size={14} />
                         </Link>

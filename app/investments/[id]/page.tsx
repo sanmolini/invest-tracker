@@ -39,13 +39,13 @@ export default async function InvestmentDetailPage({ params }: { params: { id: s
       </Link>
 
       {/* Header */}
-      <div className="card p-6">
+      <div className="card p-5 lg:p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-text-primary">{inv.name}</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <h1 className="text-xl lg:text-2xl font-bold text-text-primary">{inv.name}</h1>
               {inv.ticker && (
-                <span className="font-mono text-sm text-text-muted bg-bg-elevated px-2 py-0.5 rounded">
+                <span className="font-mono text-xs text-text-muted bg-bg-elevated px-2 py-0.5 rounded">
                   {inv.ticker}
                 </span>
               )}
@@ -55,8 +55,8 @@ export default async function InvestmentDetailPage({ params }: { params: { id: s
               <p className="text-sm text-text-muted">{inv.notes}</p>
             )}
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold font-mono text-text-primary">
+          <div className="text-right shrink-0">
+            <div className="text-2xl lg:text-3xl font-bold font-mono text-text-primary">
               {formatCurrency(inv.current_value, inv.currency)}
             </div>
             <div className={clsx('text-sm font-mono mt-1', isGain ? 'text-gain' : 'text-loss')}>
@@ -140,7 +140,7 @@ export default async function InvestmentDetailPage({ params }: { params: { id: s
               const typeInfo = TRANSACTION_TYPES[tx.type]
               const isBuy = tx.type === 'buy' || tx.type === 'deposit' || tx.type === 'dividend'
               return (
-                <div key={tx.id} className="flex items-center gap-4 px-5 py-4 hover:bg-bg-elevated/30 group transition-colors">
+                <div key={tx.id} className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-elevated/30 group transition-colors">
                   <div className={clsx(
                     'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
                     isBuy ? 'bg-gain-muted' : 'bg-loss-muted'
