@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# env files — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# typescript
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# misc
+.DS_Store
+*.pem
+.mcp.json

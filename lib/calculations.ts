@@ -5,6 +5,8 @@ import type {
   InvestmentWithData,
   AllocationItem,
   EvolutionPoint,
+  EvolutionSeries,
+  EvolutionSeriesPoint,
 } from '@/types'
 import { INVESTMENT_TYPES } from './constants'
 
@@ -118,6 +120,49 @@ export function computeEvolution(
       value,
       label: date,
     }))
+}
+
+export function computeEvolutionSeries(investments: InvestmentWithData[]): EvolutionSeries {
+  const active = investments.filter(i => i.is_active)
+
+  // Collect all unique snapshot dates across all active investments
+  const allDates = new Set<string>()
+  active.forEach(inv => {
+    inv.snapshots.forEach(snap => allDates.add(snap.date))
+  })
+
+  if (allDates.size === 0) return { points: [], assets: [] }
+
+  const sortedDates = Array.from(allDates).sort()
+
+  const points: EvolutionSeriesPoint[] = sortedDates.map(date => {
+    const point: EvolutionSeriesPoint = { date, total: 0 }
+
+    active.forEach(inv => {
+      // snapshots are sorted descending, find latest on or before this date
+      const snap = inv.snapshots.find(s => s.date <= date)
+      if (!snap) return
+
+      const val = snap.total_value
+      point.total = (point.total as number) + val
+
+      const typeKey = `type_${inv.type}`
+      point[typeKey] = ((point[typeKey] as number | undefined) ?? 0) + val
+
+      point[`asset_${inv.id}`] = val
+    })
+
+    return point
+  })
+
+  const assets = active.map(inv => ({
+    id: inv.id,
+    name: inv.name,
+    type: inv.type,
+    color: INVESTMENT_TYPES[inv.type]?.color ?? '#888',
+  }))
+
+  return { points, assets }
 }
 
 export function computeDashboardTotals(investments: InvestmentWithData[]) {

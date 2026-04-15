@@ -45,11 +45,12 @@ export const INVESTMENT_TYPES: Record<InvestmentType, {
 }
 
 export const CURRENCIES: { value: Currency; label: string; symbol: string }[] = [
-  { value: 'ARS', label: 'Peso Argentino', symbol: '$' },
+  { value: 'UYU', label: 'Peso Uruguayo', symbol: '$U' },
   { value: 'USD', label: 'Dólar Estadounidense', symbol: 'US$' },
   { value: 'EUR', label: 'Euro', symbol: '€' },
   { value: 'BTC', label: 'Bitcoin', symbol: '₿' },
   { value: 'ETH', label: 'Ethereum', symbol: 'Ξ' },
+  { value: 'ARS', label: 'Peso Argentino', symbol: '$' },
 ]
 
 export const TRANSACTION_TYPES: Record<string, { label: string; color: string }> = {

@@ -1,10 +1,12 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { computeInvestmentWithData } from '@/lib/calculations'
 import { TypeBadge, PnlBadge } from '@/components/ui/Badge'
-import { formatCurrency, formatUnits, formatDate } from '@/lib/formatting'
+import { formatCurrency, formatUnits } from '@/lib/formatting'
 import { DeleteInvestmentButton } from '@/components/investments/DeleteButton'
+import { INVESTMENT_TYPES } from '@/lib/constants'
+import type { InvestmentType, InvestmentWithData } from '@/types'
 import Link from 'next/link'
-import { PlusCircle } from 'lucide-react'
+import { PlusCircle, ChevronRight } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -22,6 +24,15 @@ export default async function InvestmentsPage() {
 
   const active = investments.filter(i => i.is_active)
   const inactive = investments.filter(i => !i.is_active)
+
+  // Group active by type maintaining INVESTMENT_TYPES order
+  const grouped = Object.keys(INVESTMENT_TYPES).reduce<Record<string, InvestmentWithData[]>>(
+    (acc, type) => {
+      const group = active.filter(i => i.type === type)
+      if (group.length) acc[type] = group
+      return acc
+    }, {}
+  )
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -48,66 +59,102 @@ export default async function InvestmentsPage() {
           </Link>
         </div>
       ) : (
-        <>
-          {/* Active investments */}
-          <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-bg-border">
-              <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-                Posiciones Activas ({active.length})
-              </div>
-            </div>
-            <div className="divide-y divide-bg-border">
-              {active.map(inv => (
-                <div key={inv.id} className="flex items-center gap-4 px-5 py-4 hover:bg-bg-elevated/40 transition-colors group">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Link href={`/investments/${inv.id}`}
-                        className="font-medium text-text-primary hover:text-brand transition-colors">
-                        {inv.name}
-                      </Link>
-                      {inv.ticker && (
-                        <span className="text-xs font-mono text-text-muted">{inv.ticker}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-text-muted">
-                      <span>Invertido: {formatCurrency(inv.total_invested, inv.currency)}</span>
-                      {inv.total_units !== null && (
-                        <span>{formatUnits(inv.total_units)} unidades</span>
-                      )}
-                      <span>{inv.transactions.length} transacciones</span>
+        <div className="space-y-4">
+          {/* Active — grouped by type */}
+          {Object.entries(grouped).map(([type, invs]) => {
+            const typeInfo = INVESTMENT_TYPES[type as InvestmentType]
+            const groupValue = invs.reduce((s, i) => s + i.current_value, 0)
+            const groupInvested = invs.reduce((s, i) => s + i.total_invested, 0)
+            const groupPnl = groupValue - groupInvested
+            const groupPct = groupInvested > 0 ? (groupPnl / groupInvested) * 100 : 0
+            const currency = invs[0].currency
+
+            return (
+              <div key={type} className="card overflow-hidden">
+                {/* Group header */}
+                <div className="px-5 py-3.5 border-b border-bg-border bg-bg-secondary flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{typeInfo.emoji}</span>
+                    <div>
+                      <div className="text-sm font-semibold text-text-primary">{typeInfo.label}</div>
+                      <div className="text-xs text-text-muted">{invs.length} posición{invs.length > 1 ? 'es' : ''}</div>
                     </div>
                   </div>
-
-                  <TypeBadge type={inv.type} size="sm" />
-
-                  <div className="text-right min-w-[100px]">
+                  <div className="text-right">
                     <div className="font-mono font-semibold text-sm text-text-primary">
-                      {formatCurrency(inv.current_value, inv.currency)}
+                      {formatCurrency(groupValue, currency)}
                     </div>
-                    <div className="text-xs font-mono mt-0.5">
-                      <span className={inv.pnl_absolute >= 0 ? 'text-gain' : 'text-loss'}>
-                        {inv.pnl_absolute >= 0 ? '+' : ''}{formatCurrency(inv.pnl_absolute, inv.currency)}
+                    <div className="flex items-center gap-2 justify-end mt-0.5">
+                      <span className={`text-xs font-mono ${groupPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
+                        {groupPnl >= 0 ? '+' : ''}{formatCurrency(groupPnl, currency)}
                       </span>
+                      <PnlBadge value={groupPct} size="sm" />
                     </div>
-                  </div>
-
-                  <PnlBadge value={inv.pnl_percent} size="sm" />
-
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link href={`/investments/${inv.id}`} className="btn-ghost py-1.5 text-xs">
-                      Ver
-                    </Link>
-                    <DeleteInvestmentButton id={inv.id} name={inv.name} />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {/* Investments in group */}
+                <div className="divide-y divide-bg-border">
+                  {invs.map(inv => (
+                    <div key={inv.id}
+                      className="flex items-center gap-4 px-5 py-4 hover:bg-bg-elevated/40 transition-colors group">
+                      {/* Color dot */}
+                      <div className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: typeInfo.color }} />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/investments/${inv.id}`}
+                            className="font-medium text-sm text-text-primary hover:text-brand transition-colors">
+                            {inv.name}
+                          </Link>
+                          {inv.ticker && (
+                            <span className="text-xs font-mono text-text-muted bg-bg-elevated px-1.5 py-0.5 rounded">
+                              {inv.ticker}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5">
+                          <span>Invertido: <span className="font-mono">{formatCurrency(inv.total_invested, inv.currency)}</span></span>
+                          {inv.total_units !== null && (
+                            <span>{formatUnits(inv.total_units)} u</span>
+                          )}
+                          {inv.current_unit_price !== null && (
+                            <span>@ <span className="font-mono">{formatCurrency(inv.current_unit_price, inv.currency)}</span></span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right min-w-[90px]">
+                        <div className="font-mono font-semibold text-sm text-text-primary">
+                          {formatCurrency(inv.current_value, inv.currency)}
+                        </div>
+                        <div className="text-xs font-mono mt-0.5">
+                          <span className={inv.pnl_absolute >= 0 ? 'text-gain' : 'text-loss'}>
+                            {inv.pnl_absolute >= 0 ? '+' : ''}{formatCurrency(inv.pnl_absolute, inv.currency)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <PnlBadge value={inv.pnl_percent} size="sm" />
+
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Link href={`/investments/${inv.id}`} className="btn-ghost py-1 px-2 text-xs">
+                          <ChevronRight size={14} />
+                        </Link>
+                        <DeleteInvestmentButton id={inv.id} name={inv.name} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
 
           {/* Archived */}
           {inactive.length > 0 && (
-            <div className="card overflow-hidden opacity-60">
-              <div className="px-5 py-4 border-b border-bg-border">
+            <div className="card overflow-hidden opacity-50">
+              <div className="px-5 py-3.5 border-b border-bg-border">
                 <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                   Archivadas ({inactive.length})
                 </div>
@@ -123,7 +170,7 @@ export default async function InvestmentsPage() {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )

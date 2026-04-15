@@ -1,5 +1,5 @@
 export type InvestmentType = 'liquidity_fund' | 'crypto' | 'stock' | 'etf' | 'savings'
-export type Currency = 'ARS' | 'USD' | 'EUR' | 'BTC' | 'ETH'
+export type Currency = 'UYU' | 'USD' | 'EUR' | 'BTC' | 'ETH' | 'ARS'
 export type TransactionType = 'buy' | 'sell' | 'deposit' | 'withdrawal' | 'dividend'
 
 export interface Investment {
@@ -61,6 +61,24 @@ export interface EvolutionPoint {
   date: string
   value: number
   label: string
+}
+
+export interface EvolutionSeriesPoint {
+  date: string
+  total: number
+  [key: string]: number | string
+}
+
+export interface EvolutionSeriesAsset {
+  id: string
+  name: string
+  type: InvestmentType
+  color: string
+}
+
+export interface EvolutionSeries {
+  points: EvolutionSeriesPoint[]
+  assets: EvolutionSeriesAsset[]
 }
 
 export interface DashboardData {

@@ -1,15 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import {
-  LayoutDashboard,
-  TrendingUp,
-  RefreshCw,
-  PlusCircle,
-  BarChart3,
-  Settings,
-} from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, TrendingUp, RefreshCw, PlusCircle, BarChart3, LogOut } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 
 const NAV_ITEMS = [
@@ -20,6 +15,27 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<{ email?: string; avatar?: string; name?: string } | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser({
+          email: data.user.email,
+          avatar: data.user.user_metadata?.avatar_url,
+          name: data.user.user_metadata?.full_name,
+        })
+      }
+    })
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <aside className="w-60 flex-shrink-0 bg-bg-secondary border-r border-bg-border flex flex-col">
@@ -73,11 +89,34 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-bg-border">
-        <div className="text-[11px] text-text-muted">
-          Datos actualizados manualmente
-        </div>
+      {/* User + Logout */}
+      <div className="px-3 py-4 border-t border-bg-border space-y-2">
+        {user && (
+          <div className="flex items-center gap-2.5 px-3 py-2">
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full flex-shrink-0" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-brand/20 flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">
+                {user.name?.[0] ?? user.email?.[0] ?? '?'}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-text-primary truncate">
+                {user.name ?? user.email}
+              </div>
+              {user.name && (
+                <div className="text-[10px] text-text-muted truncate">{user.email}</div>
+              )}
+            </div>
+          </div>
+        )}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-muted hover:text-loss hover:bg-loss/5 transition-all duration-200"
+        >
+          <LogOut size={15} />
+          Cerrar sesión
+        </button>
       </div>
     </aside>
   )

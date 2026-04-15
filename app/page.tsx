@@ -6,7 +6,7 @@ import { InvestmentSummaryTable } from '@/components/dashboard/InvestmentSummary
 import {
   computeInvestmentWithData,
   computeAllocation,
-  computeEvolution,
+  computeEvolutionSeries,
   computeDashboardTotals,
 } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatLargeNumber } from '@/lib/formatting'
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
     computeDashboardTotals(investments)
 
   const allocation = computeAllocation(investments)
-  const evolution = computeEvolution(investments)
+  const evolutionSeries = computeEvolutionSeries(investments)
 
   const isGain = pnlAbsolute >= 0
   const hasData = investments.some(i => i.is_active)
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Valor Total"
-          value={hasData ? formatLargeNumber(totalValue) : '—'}
+          value={hasData ? formatLargeNumber(totalValue, 'USD') : '—'}
           subtitle={hasData ? `${investments.filter(i => i.is_active).length} posiciones activas` : 'Sin datos'}
           icon={<DollarSign size={15} />}
           accent="default"
@@ -81,14 +81,14 @@ export default async function DashboardPage() {
         />
         <KPICard
           title="Total Invertido"
-          value={hasData ? formatLargeNumber(totalInvested) : '—'}
+          value={hasData ? formatLargeNumber(totalInvested, 'USD') : '—'}
           subtitle="Capital ingresado"
           icon={<PiggyBank size={15} />}
           delay={50}
         />
         <KPICard
           title="Ganancia / Pérdida"
-          value={hasData ? `${isGain ? '+' : ''}${formatLargeNumber(pnlAbsolute)}` : '—'}
+          value={hasData ? `${isGain ? '+' : ''}${formatLargeNumber(pnlAbsolute, 'USD')}` : '—'}
           subtitle={hasData ? (isGain ? 'Ganancia neta' : 'Pérdida neta') : undefined}
           change={hasData ? pnlPercent : undefined}
           accent={hasData ? (isGain ? 'gain' : 'loss') : 'default'}
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <EvolutionChart data={evolution} />
+          <EvolutionChart series={evolutionSeries} />
         </div>
         <div>
           <AllocationChart data={allocation} />

@@ -15,7 +15,7 @@ export function InvestmentForm() {
     name: '',
     type: 'stock' as InvestmentType,
     ticker: '',
-    currency: 'ARS' as Currency,
+    currency: 'USD' as Currency,
     is_unit_based: false,
     notes: '',
   })

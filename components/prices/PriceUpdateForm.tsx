@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { saveMultipleSnapshots } from '@/app/actions/snapshots'
 import { TypeBadge } from '@/components/ui/Badge'
 import { formatCurrency, formatUnits } from '@/lib/formatting'
-import type { InvestmentWithData, Currency } from '@/types'
+import type { InvestmentWithData } from '@/types'
 import { INVESTMENT_TYPES } from '@/lib/constants'
 import clsx from 'clsx'
 
@@ -12,10 +12,9 @@ interface Props {
   investments: InvestmentWithData[]
 }
 
-interface PriceEntry {
-  investment_id: string
-  total_value: string
-  unit_price: string
+// price key: ticker (uppercase) for unit-based-with-ticker, else investment id
+function priceKey(inv: InvestmentWithData): string {
+  return inv.is_unit_based && inv.ticker ? inv.ticker.toUpperCase() : inv.id
 }
 
 export function PriceUpdateForm({ investments }: Props) {
@@ -25,42 +24,40 @@ export function PriceUpdateForm({ investments }: Props) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  const [prices, setPrices] = useState<Record<string, PriceEntry>>(
-    Object.fromEntries(investments.map(inv => [inv.id, {
-      investment_id: inv.id,
-      total_value: inv.current_value > 0 ? inv.current_value.toFixed(2) : '',
-      unit_price: inv.current_unit_price ? inv.current_unit_price.toFixed(4) : '',
-    }]))
-  )
-
-  function updatePrice(id: string, key: 'total_value' | 'unit_price', value: string) {
-    setPrices(prev => {
-      const updated = { ...prev, [id]: { ...prev[id], [key]: value } }
-      // If unit_price changes and investment has units, auto-compute total
-      const inv = investments.find(i => i.id === id)
-      if (key === 'unit_price' && inv?.is_unit_based && inv.total_units) {
-        const up = parseFloat(value)
-        if (!isNaN(up)) {
-          updated[id].total_value = (inv.total_units * up).toFixed(2)
-        }
+  const [prices, setPrices] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {}
+    investments.forEach(inv => {
+      const k = priceKey(inv)
+      if (m[k]) return // already set by another investment sharing the same ticker
+      if (inv.is_unit_based) {
+        m[k] = inv.current_unit_price ? inv.current_unit_price.toFixed(4) : ''
+      } else {
+        m[k] = inv.current_value > 0 ? inv.current_value.toFixed(2) : ''
       }
-      return updated
+    })
+    return m
+  })
+
+  const setPrice = (key: string, value: string) =>
+    setPrices(prev => ({ ...prev, [key]: value }))
+
+  function buildSnapshots() {
+    return investments.flatMap(inv => {
+      const k = priceKey(inv)
+      const raw = parseFloat(prices[k] ?? '')
+      if (isNaN(raw) || raw <= 0) return []
+      if (inv.is_unit_based) {
+        if (!inv.total_units) return []
+        return [{ investment_id: inv.id, date, unit_price: raw, total_value: inv.total_units * raw }]
+      }
+      return [{ investment_id: inv.id, date, total_value: raw }]
     })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const snapshots = Object.values(prices)
-      .filter(p => p.total_value && parseFloat(p.total_value) > 0)
-      .map(p => ({
-        investment_id: p.investment_id,
-        date,
-        total_value: parseFloat(p.total_value),
-        unit_price: p.unit_price ? parseFloat(p.unit_price) : null,
-      }))
-
+    const snapshots = buildSnapshots()
     if (!snapshots.length) { setError('Ingresá al menos un valor'); return }
-
     setLoading(true)
     setError('')
     try {
@@ -74,20 +71,38 @@ export function PriceUpdateForm({ investments }: Props) {
     }
   }
 
-  // Group by type
-  const byType = Object.entries(INVESTMENT_TYPES).reduce<Record<string, InvestmentWithData[]>>(
-    (acc, [type]) => {
-      const inv = investments.filter(i => i.type === type)
-      if (inv.length) acc[type] = inv
-      return acc
-    }, {}
-  )
+  const byType = useMemo(() =>
+    Object.entries(INVESTMENT_TYPES).reduce<Record<string, InvestmentWithData[]>>(
+      (acc, [type]) => {
+        const invs = investments.filter(i => i.type === type)
+        if (invs.length) acc[type] = invs
+        return acc
+      }, {}
+    ), [investments])
+
+  // Within a type, group unit-based-with-ticker by ticker; rest are solo rows
+  function splitGroup(invs: InvestmentWithData[]) {
+    const tickerMap: Record<string, InvestmentWithData[]> = {}
+    const solos: InvestmentWithData[] = []
+    invs.forEach(inv => {
+      if (inv.is_unit_based && inv.ticker) {
+        const t = inv.ticker.toUpperCase()
+        if (!tickerMap[t]) tickerMap[t] = []
+        tickerMap[t].push(inv)
+      } else {
+        solos.push(inv)
+      }
+    })
+    return { tickerMap, solos }
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Date selector */}
+      {/* Date */}
       <div className="card p-4 flex items-center gap-4">
-        <label className="text-sm font-medium text-text-secondary whitespace-nowrap">Fecha de actualización</label>
+        <label className="text-sm font-medium text-text-secondary whitespace-nowrap">
+          Fecha de actualización
+        </label>
         <input
           type="date"
           className="input-base max-w-xs"
@@ -96,93 +111,157 @@ export function PriceUpdateForm({ investments }: Props) {
         />
       </div>
 
-      {/* Investment cards by type */}
-      {Object.entries(byType).map(([type, invs]) => (
-        <div key={type} className="card overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-bg-border bg-bg-secondary">
-            <TypeBadge type={type as any} />
-          </div>
-          <div className="divide-y divide-bg-border">
-            {invs.map(inv => {
-              const entry = prices[inv.id]
-              const newVal = parseFloat(entry?.total_value)
-              const pnl = !isNaN(newVal) && inv.total_invested > 0
-                ? ((newVal - inv.total_invested) / inv.total_invested) * 100
-                : null
+      {Object.entries(byType).map(([type, invs]) => {
+        const { tickerMap, solos } = splitGroup(invs)
+        return (
+          <div key={type} className="card overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-bg-border bg-bg-secondary">
+              <TypeBadge type={type as any} />
+            </div>
+            <div className="divide-y divide-bg-border">
 
-              return (
-                <div key={inv.id} className="px-5 py-4">
-                  <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-text-primary">{inv.name}</div>
-                      {inv.ticker && (
-                        <div className="text-xs font-mono text-text-muted">{inv.ticker}</div>
-                      )}
-                      <div className="text-xs text-text-muted mt-1">
-                        Invertido: <span className="font-mono">{formatCurrency(inv.total_invested, inv.currency)}</span>
-                        {inv.current_value > 0 && (
-                          <> · Anterior: <span className="font-mono">{formatCurrency(inv.current_value, inv.currency)}</span></>
-                        )}
-                        {inv.total_units !== null && (
-                          <> · {formatUnits(inv.total_units)} unidades</>
-                        )}
+              {/* ── Ticker groups: one price input propagates to all positions ── */}
+              {Object.entries(tickerMap).map(([ticker, tickerInvs]) => {
+                const up = parseFloat(prices[ticker] ?? '')
+                const hasPrice = !isNaN(up) && up > 0
+
+                return (
+                  <div key={ticker} className="px-5 py-4">
+                    {/* Ticker header + price input */}
+                    <div className="flex items-end gap-4 flex-wrap">
+                      <div className="flex-1">
+                        <div className="font-mono font-bold text-text-primary">{ticker}</div>
+                        <div className="text-xs text-text-muted mt-0.5">
+                          {tickerInvs.length} posición{tickerInvs.length > 1 ? 'es' : ''}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label-base">Precio por unidad</label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          className="input-base font-mono w-44"
+                          placeholder="0.00"
+                          value={prices[ticker] ?? ''}
+                          onChange={e => setPrice(ticker, e.target.value)}
+                        />
                       </div>
                     </div>
 
-                    {/* Inputs */}
-                    <div className="flex gap-3 flex-wrap">
-                      {inv.is_unit_based && (
-                        <div className="min-w-[120px]">
-                          <label className="label-base">Precio/Unidad</label>
-                          <input
-                            type="number"
-                            step="any"
-                            min="0"
-                            className="input-base font-mono w-32"
-                            placeholder="0.00"
-                            value={entry?.unit_price ?? ''}
-                            onChange={e => updatePrice(inv.id, 'unit_price', e.target.value)}
-                          />
+                    {/* Sub-rows per investment, computed total is read-only */}
+                    <div className="mt-3 space-y-2.5 pl-4 border-l-2 border-bg-border">
+                      {tickerInvs.map(inv => {
+                        const computed = hasPrice && inv.total_units != null
+                          ? inv.total_units * up
+                          : null
+                        const pnl = computed != null && inv.total_invested > 0
+                          ? ((computed - inv.total_invested) / inv.total_invested) * 100
+                          : null
+
+                        return (
+                          <div key={inv.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
+                            <div>
+                              <span className="font-medium text-text-primary">{inv.name}</span>
+                              <span className="text-xs text-text-muted ml-2">
+                                {inv.total_units != null ? `${formatUnits(inv.total_units)} u · ` : ''}
+                                inv: {formatCurrency(inv.total_invested, inv.currency)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {computed != null && (
+                                <span className="font-mono text-sm text-text-primary">
+                                  = {formatCurrency(computed, inv.currency)}
+                                </span>
+                              )}
+                              {pnl != null && (
+                                <span className={clsx(
+                                  'text-xs font-mono font-semibold',
+                                  pnl >= 0 ? 'text-gain' : 'text-loss'
+                                )}>
+                                  {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* ── Solo rows: individual price inputs ── */}
+              {solos.map(inv => {
+                const k = inv.id
+                const raw = parseFloat(prices[k] ?? '')
+                const computed = inv.is_unit_based && inv.total_units != null && !isNaN(raw) && raw > 0
+                  ? inv.total_units * raw
+                  : null
+                const displayTotal = computed ?? (!isNaN(raw) && raw > 0 ? raw : null)
+                const pnl = displayTotal != null && inv.total_invested > 0
+                  ? ((displayTotal - inv.total_invested) / inv.total_invested) * 100
+                  : null
+
+                return (
+                  <div key={inv.id} className="px-5 py-4">
+                    <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-text-primary">{inv.name}</div>
+                        <div className="text-xs text-text-muted mt-1">
+                          Invertido: <span className="font-mono">{formatCurrency(inv.total_invested, inv.currency)}</span>
+                          {inv.current_value > 0 && (
+                            <> · Anterior: <span className="font-mono">{formatCurrency(inv.current_value, inv.currency)}</span></>
+                          )}
+                          {inv.total_units != null && (
+                            <> · {formatUnits(inv.total_units)} unidades</>
+                          )}
                         </div>
-                      )}
-                      <div className="min-w-[140px]">
-                        <label className="label-base">Valor Total ({inv.currency})</label>
+                      </div>
+
+                      <div>
+                        <label className="label-base">
+                          {inv.is_unit_based ? 'Precio/Unidad' : `Valor Total (${inv.currency})`}
+                        </label>
                         <input
                           type="number"
                           step="any"
                           min="0"
                           className={clsx(
                             'input-base font-mono w-36',
-                            pnl !== null && pnl >= 0 && 'border-gain/30 focus:ring-gain/30',
-                            pnl !== null && pnl < 0 && 'border-loss/30 focus:ring-loss/30',
+                            pnl != null && pnl >= 0 && 'border-gain/30',
+                            pnl != null && pnl < 0 && 'border-loss/30',
                           )}
                           placeholder="0.00"
-                          value={entry?.total_value ?? ''}
-                          onChange={e => updatePrice(inv.id, 'total_value', e.target.value)}
+                          value={prices[k] ?? ''}
+                          onChange={e => setPrice(k, e.target.value)}
                         />
                       </div>
-                    </div>
 
-                    {/* Projected P&L */}
-                    {pnl !== null && (
-                      <div className="text-right self-end pb-0.5">
-                        <div className={clsx(
-                          'text-sm font-mono font-semibold',
-                          pnl >= 0 ? 'text-gain' : 'text-loss'
-                        )}>
-                          {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+                      {pnl != null && (
+                        <div className="text-right self-end pb-0.5 min-w-[80px]">
+                          <div className={clsx(
+                            'text-sm font-mono font-semibold',
+                            pnl >= 0 ? 'text-gain' : 'text-loss'
+                          )}>
+                            {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+                          </div>
+                          {displayTotal != null && (
+                            <div className="text-xs text-text-muted">
+                              {formatCurrency(displayTotal, inv.currency)}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-xs text-text-muted">vs invertido</div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {error && (
         <div className="text-loss text-sm bg-loss-muted border border-loss/20 rounded-lg px-4 py-3">
