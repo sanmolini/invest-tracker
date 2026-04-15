@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Sidebar />
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="min-h-full p-4 lg:p-8 pb-24 lg:pb-8">
+        <div className="min-h-full pt-4 px-4 pb-28 lg:p-8">
           {children}
         </div>
       </main>
