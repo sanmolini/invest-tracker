@@ -15,9 +15,14 @@ export interface CreateInvestmentInput {
 
 export async function createInvestment(data: CreateInvestmentInput) {
   const supabase = createServerClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
   const { error, data: created } = await supabase
     .from('investments')
     .insert({
+      user_id: user.id,
       name: data.name,
       type: data.type,
       ticker: data.ticker || null,
