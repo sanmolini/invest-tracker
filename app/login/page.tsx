@@ -32,11 +32,20 @@ export default function LoginPage() {
         router.refresh()
       }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) {
-        setError(error.message)
+        if (error.message.toLowerCase().includes('rate limit')) {
+          setError('Demasiados intentos. Esperá unos minutos e intentá de nuevo.')
+        } else {
+          setError(error.message)
+        }
         setLoading(false)
+      } else if (data.session) {
+        // Email confirmation disabled — session created immediately
+        router.push('/')
+        router.refresh()
       } else {
+        // Email confirmation enabled — ask user to check inbox
         setSignupSuccess(true)
         setLoading(false)
       }
