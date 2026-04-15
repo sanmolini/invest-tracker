@@ -3,6 +3,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { EvolutionChart } from '@/components/dashboard/EvolutionChart'
 import { InvestmentSummaryTable } from '@/components/dashboard/InvestmentSummaryTable'
+import { TypeBreakdown } from '@/components/dashboard/TypeBreakdown'
 import {
   computeInvestmentWithData,
   computeAllocation,
@@ -148,6 +149,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Per-type breakdown */}
+      <TypeBreakdown investments={investments} />
 
       {/* Investments table */}
       <InvestmentSummaryTable investments={investments} />

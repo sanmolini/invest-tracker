@@ -15,17 +15,18 @@ interface Props {
 
 const TOTAL_COLOR = '#00c27c'
 
-function getActiveTypes(assets: EvolutionSeriesAsset[], points: Record<string, unknown>[]): InvestmentType[] {
+function getActiveTypes(assets: EvolutionSeriesAsset[], points: any[]): InvestmentType[] {
   const types = new Set<InvestmentType>()
   assets.forEach(a => types.add(a.type))
   return Array.from(types).filter(t =>
-    points.some(p => (p[`type_${t}`] as number | undefined) != null)
+    points.some(p => p[`type_${t}`] != null)
   )
 }
 
 const TooltipContent = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
-  const visible = payload.filter((p: any) => p.value != null)
+  const visible = payload.filter((p: any) => p.value != null && !p.hide)
+  if (!visible.length) return null
   return (
     <div className="bg-bg-elevated border border-bg-border rounded-xl px-3 py-2.5 shadow-card text-sm min-w-[150px] max-w-[220px]">
       <div className="text-text-muted text-xs mb-2">{formatDateShort(label)}</div>
@@ -41,6 +42,23 @@ const TooltipContent = ({ active, payload, label }: any) => {
         </div>
       ))}
     </div>
+  )
+}
+
+function FilterPill({ label, active, color, onClick }: {
+  label: string; active: boolean; color: string; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
+      style={active
+        ? { borderColor: color, backgroundColor: `${color}22`, color }
+        : { borderColor: 'rgba(255,255,255,0.08)', color: '#64748b' }
+      }
+    >
+      {label}
+    </button>
   )
 }
 
@@ -118,7 +136,7 @@ export function EvolutionChart({ series }: Props) {
         {assets.length > 0 && (
           <button
             onClick={() => setShowAssets(p => !p)}
-            className="px-2.5 py-1 rounded-full text-xs font-medium border border-bg-border text-text-muted hover:border-bg-elevated transition-all"
+            className="px-2.5 py-1 rounded-full text-xs font-medium border border-[rgba(255,255,255,0.08)] text-[#64748b] hover:text-text-primary transition-all"
           >
             {showAssets ? '▾' : '▸'} Por asset
           </button>
@@ -151,11 +169,7 @@ export function EvolutionChart({ series }: Props) {
                 <stop offset="100%" stopColor={TOTAL_COLOR} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis
               dataKey="date"
               tickFormatter={(v) => formatDateShort(v)}
@@ -178,10 +192,9 @@ export function EvolutionChart({ series }: Props) {
             />
             <Tooltip content={<TooltipContent />} />
 
-            {/* Asset lines (below type lines, below total) */}
+            {/* Asset lines — always mounted, hidden via prop */}
             {assets.map(asset => {
               const key = `asset_${asset.id}`
-              if (!activeKeys.has(key)) return null
               return (
                 <Line
                   key={key}
@@ -195,6 +208,7 @@ export function EvolutionChart({ series }: Props) {
                   activeDot={{ r: 3, fill: asset.color, strokeWidth: 0 }}
                   connectNulls
                   opacity={0.65}
+                  hide={!activeKeys.has(key)}
                 />
               )
             })}
@@ -202,7 +216,6 @@ export function EvolutionChart({ series }: Props) {
             {/* Type lines */}
             {activeTypes.map(type => {
               const key = `type_${type}`
-              if (!activeKeys.has(key)) return null
               const info = INVESTMENT_TYPES[type]
               return (
                 <Line
@@ -215,52 +228,26 @@ export function EvolutionChart({ series }: Props) {
                   dot={false}
                   activeDot={{ r: 3, fill: info.color, strokeWidth: 0 }}
                   connectNulls
+                  hide={!activeKeys.has(key)}
                 />
               )
             })}
 
-            {/* Total area — on top */}
-            {activeKeys.has('total') && (
-              <Area
-                type="monotone"
-                dataKey="total"
-                name="Total"
-                stroke={TOTAL_COLOR}
-                strokeWidth={2.5}
-                fill="url(#totalGradientEvo)"
-                dot={false}
-                activeDot={{ r: 4, fill: TOTAL_COLOR, stroke: '#080b14', strokeWidth: 2 }}
-              />
-            )}
+            {/* Total area */}
+            <Area
+              type="monotone"
+              dataKey="total"
+              name="Total"
+              stroke={TOTAL_COLOR}
+              strokeWidth={2.5}
+              fill="url(#totalGradientEvo)"
+              dot={false}
+              activeDot={{ r: 4, fill: TOTAL_COLOR, stroke: '#080b14', strokeWidth: 2 }}
+              hide={!activeKeys.has('total')}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
-  )
-}
-
-function FilterPill({
-  label, active, color, onClick,
-}: {
-  label: string
-  active: boolean
-  color: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
-      style={active ? {
-        borderColor: color,
-        backgroundColor: `${color}22`,
-        color,
-      } : {
-        borderColor: 'rgba(255,255,255,0.08)',
-        color: '#64748b',
-      }}
-    >
-      {label}
-    </button>
   )
 }
