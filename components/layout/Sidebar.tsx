@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, TrendingUp, RefreshCw, PlusCircle, BarChart3, LogOut } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, RefreshCw, PlusCircle, BarChart3, LogOut, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/investments', icon: TrendingUp, label: 'Inversiones' },
   { href: '/prices', icon: RefreshCw, label: 'Actualizar Precios' },
+  { href: '/settings', icon: Settings, label: 'Configuración' },
 ]
 
 export function Sidebar() {

@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, TrendingUp, RefreshCw, PlusCircle } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, RefreshCw, PlusCircle, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/',            icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/investments', icon: TrendingUp,      label: 'Portfolio'  },
   { href: '/investments/new', icon: PlusCircle,  label: 'Nueva'      },
   { href: '/prices',      icon: RefreshCw,       label: 'Precios'    },
+  { href: '/settings',    icon: Settings,        label: 'Ajustes'    },
 ]
 
 export function BottomNav() {
