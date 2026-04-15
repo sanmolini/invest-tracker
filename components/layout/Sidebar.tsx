@@ -103,6 +103,7 @@ export function Sidebar() {
           <LogOut size={15} />
           Cerrar sesión
         </button>
+        <div className="px-3 pt-1 text-[10px] text-text-muted/50 font-mono">v0.2.0</div>
       </div>
     </aside>
   )

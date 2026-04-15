@@ -17,6 +17,7 @@ export function BottomNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary border-t border-bg-border safe-area-inset-bottom">
+      <div className="absolute top-1 right-2 text-[9px] font-mono text-text-muted/40">v0.2.0</div>
       <div className="flex items-stretch">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const isActive =

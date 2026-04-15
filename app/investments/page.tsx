@@ -3,14 +3,32 @@ import { computeInvestmentWithData } from '@/lib/calculations'
 import { TypeBadge, PnlBadge } from '@/components/ui/Badge'
 import { formatCurrency, formatUnits } from '@/lib/formatting'
 import { DeleteInvestmentButton } from '@/components/investments/DeleteButton'
+import { InvestmentsFilter } from '@/components/investments/InvestmentsFilter'
 import { INVESTMENT_TYPES } from '@/lib/constants'
 import type { InvestmentType, InvestmentWithData } from '@/types'
 import Link from 'next/link'
 import { PlusCircle, ChevronRight } from 'lucide-react'
+import { Suspense } from 'react'
 
 export const revalidate = 0
 
-export default async function InvestmentsPage() {
+type SortKey = 'value' | 'invested' | 'pnl' | 'name'
+
+function sortInvestments(invs: InvestmentWithData[], sort: SortKey): InvestmentWithData[] {
+  return [...invs].sort((a, b) => {
+    if (sort === 'value')    return b.current_value - a.current_value
+    if (sort === 'invested') return b.total_invested - a.total_invested
+    if (sort === 'pnl')      return b.pnl_percent - a.pnl_percent
+    if (sort === 'name')     return a.name.localeCompare(b.name)
+    return 0
+  })
+}
+
+export default async function InvestmentsPage({
+  searchParams,
+}: {
+  searchParams: { type?: string; sort?: string }
+}) {
   const supabase = await createServerClient()
   const [investRes, txRes, snapRes] = await Promise.all([
     supabase.from('investments').select('*').order('created_at', { ascending: false }),
@@ -25,11 +43,20 @@ export default async function InvestmentsPage() {
   const active = investments.filter(i => i.is_active)
   const inactive = investments.filter(i => !i.is_active)
 
-  // Group active by type maintaining INVESTMENT_TYPES order
+  const filterType = searchParams.type as InvestmentType | undefined
+  const sortBy = (searchParams.sort ?? 'value') as SortKey
+
+  // Types that have active investments, in canonical order
+  const availableTypes = Object.keys(INVESTMENT_TYPES).filter(
+    t => active.some(i => i.type === t)
+  ) as InvestmentType[]
+
+  // Group active by type
   const grouped = Object.keys(INVESTMENT_TYPES).reduce<Record<string, InvestmentWithData[]>>(
     (acc, type) => {
+      if (filterType && type !== filterType) return acc
       const group = active.filter(i => i.type === type)
-      if (group.length) acc[type] = group
+      if (group.length) acc[type] = sortInvestments(group, sortBy)
       return acc
     }, {}
   )
@@ -43,9 +70,9 @@ export default async function InvestmentsPage() {
             {active.length} activas · {inactive.length} archivadas
           </p>
         </div>
-        <Link href="/investments/new" className="btn-primary">
+        <Link href="/investments/new" className="btn-primary hidden sm:inline-flex">
           <PlusCircle size={16} />
-          Nueva Inversión
+          Nueva
         </Link>
       </div>
 
@@ -60,14 +87,19 @@ export default async function InvestmentsPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Filters + sort */}
+          <Suspense>
+            <InvestmentsFilter availableTypes={availableTypes} />
+          </Suspense>
+
           {/* Active — grouped by type */}
           {Object.entries(grouped).map(([type, invs]) => {
             const typeInfo = INVESTMENT_TYPES[type as InvestmentType]
-            const groupValue = invs.reduce((s, i) => s + i.current_value, 0)
+            const groupValue    = invs.reduce((s, i) => s + i.current_value, 0)
             const groupInvested = invs.reduce((s, i) => s + i.total_invested, 0)
-            const groupPnl = groupValue - groupInvested
-            const groupPct = groupInvested > 0 ? (groupPnl / groupInvested) * 100 : 0
-            const currency = invs[0].currency
+            const groupPnl      = groupValue - groupInvested
+            const groupPct      = groupInvested > 0 ? (groupPnl / groupInvested) * 100 : 0
+            const currency      = invs[0].currency
 
             return (
               <div key={type} className="card overflow-hidden">
@@ -77,7 +109,11 @@ export default async function InvestmentsPage() {
                     <span className="text-lg">{typeInfo.emoji}</span>
                     <div>
                       <div className="text-sm font-semibold text-text-primary">{typeInfo.label}</div>
-                      <div className="text-xs text-text-muted">{invs.length} posición{invs.length > 1 ? 'es' : ''}</div>
+                      <div className="text-xs text-text-muted">
+                        {invs.length} posición{invs.length > 1 ? 'es' : ''}
+                        <span className="mx-1.5">·</span>
+                        <span className="font-mono">Inv: {formatCurrency(groupInvested, currency)}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -98,7 +134,6 @@ export default async function InvestmentsPage() {
                   {invs.map(inv => (
                     <div key={inv.id}
                       className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-elevated/40 transition-colors group">
-                      {/* Color dot */}
                       <div className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ background: typeInfo.color }} />
 
@@ -147,6 +182,15 @@ export default async function InvestmentsPage() {
               </div>
             )
           })}
+
+          {/* Empty state when filter has no results */}
+          {Object.keys(grouped).length === 0 && filterType && (
+            <div className="card p-8 text-center">
+              <div className="text-text-muted text-sm">
+                No hay inversiones activas de tipo {INVESTMENT_TYPES[filterType]?.label}
+              </div>
+            </div>
+          )}
 
           {/* Archived */}
           {inactive.length > 0 && (
