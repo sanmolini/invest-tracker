@@ -160,7 +160,7 @@ export function EvolutionChart({ series }: Props) {
         </div>
       )}
 
-      <div className="h-56">
+      <div className="h-48 lg:h-56">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={points} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
             <defs>

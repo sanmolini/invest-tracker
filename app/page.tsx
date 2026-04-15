@@ -55,12 +55,12 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="text-text-muted text-sm mt-1">Resumen de tu portfolio de inversiones</p>
         </div>
-        <div className="flex gap-2">
+        <div className="hidden sm:flex gap-2">
           <Link href="/prices" className="btn-secondary text-sm">
             Actualizar precios
           </Link>

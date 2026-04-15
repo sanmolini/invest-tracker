@@ -63,7 +63,7 @@ export function AllocationChart({ data }: Props) {
       <div className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-5">
         Distribución por Tipo
       </div>
-      <div className="h-48">
+      <div className="h-44 lg:h-48">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

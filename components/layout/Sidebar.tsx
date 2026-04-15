@@ -32,7 +32,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-60 flex-shrink-0 bg-bg-secondary border-r border-bg-border flex flex-col">
+    <aside className="hidden lg:flex w-60 flex-shrink-0 bg-bg-secondary border-r border-bg-border flex-col">
       {/* Logo */}
       <div className="px-5 py-6 border-b border-bg-border">
         <div className="flex items-center gap-3">

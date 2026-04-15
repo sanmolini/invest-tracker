@@ -3,14 +3,15 @@ import { ChevronRight } from 'lucide-react'
 import { TypeBadge, PnlBadge } from '@/components/ui/Badge'
 import { formatCurrency, formatUnits } from '@/lib/formatting'
 import type { InvestmentWithData } from '@/types'
-import clsx from 'clsx'
 
 interface Props {
   investments: InvestmentWithData[]
 }
 
 export function InvestmentSummaryTable({ investments }: Props) {
-  const active = investments.filter(i => i.is_active)
+  const active = investments
+    .filter(i => i.is_active)
+    .sort((a, b) => b.current_value - a.current_value)
 
   if (!active.length) {
     return (
@@ -25,7 +26,7 @@ export function InvestmentSummaryTable({ investments }: Props) {
 
   return (
     <div className="card overflow-hidden">
-      <div className="px-5 py-4 border-b border-bg-border flex items-center justify-between">
+      <div className="px-4 lg:px-5 py-4 border-b border-bg-border flex items-center justify-between">
         <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Posiciones
         </div>
@@ -34,7 +35,48 @@ export function InvestmentSummaryTable({ investments }: Props) {
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: card list */}
+      <div className="lg:hidden divide-y divide-bg-border">
+        {active.map(inv => {
+          const isGain = inv.pnl_absolute >= 0
+          return (
+            <Link
+              key={inv.id}
+              href={`/investments/${inv.id}`}
+              className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-elevated/50 transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm text-text-primary truncate">{inv.name}</span>
+                  {inv.ticker && (
+                    <span className="text-[10px] font-mono text-text-muted bg-bg-elevated px-1 rounded shrink-0">
+                      {inv.ticker}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <TypeBadge type={inv.type} size="sm" />
+                  {inv.total_units !== null && (
+                    <span className="text-[10px] text-text-muted">{formatUnits(inv.total_units)} u</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-mono text-sm font-semibold text-text-primary">
+                  {formatCurrency(inv.current_value, inv.currency)}
+                </div>
+                <div className={`text-xs font-mono ${isGain ? 'text-gain' : 'text-loss'}`}>
+                  {isGain ? '+' : ''}{formatCurrency(inv.pnl_absolute, inv.currency)}
+                </div>
+              </div>
+              <PnlBadge value={inv.pnl_percent} size="sm" />
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-bg-border">
@@ -47,49 +89,47 @@ export function InvestmentSummaryTable({ investments }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-bg-border">
-            {active
-              .sort((a, b) => b.current_value - a.current_value)
-              .map((inv) => {
-                const isGain = inv.pnl_absolute >= 0
-                return (
-                  <tr key={inv.id} className="hover:bg-bg-elevated/50 transition-colors group">
-                    <td className="px-5 py-3.5">
-                      <div className="font-medium text-sm text-text-primary">{inv.name}</div>
-                      {inv.ticker && (
-                        <div className="text-xs text-text-muted font-mono mt-0.5">{inv.ticker}</div>
-                      )}
-                      {inv.total_units !== null && (
-                        <div className="text-xs text-text-muted mt-0.5">
-                          {formatUnits(inv.total_units)} unidades
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <TypeBadge type={inv.type} size="sm" />
-                    </td>
-                    <td className="px-5 py-3.5 font-mono text-sm text-text-secondary">
-                      {formatCurrency(inv.total_invested, inv.currency)}
-                    </td>
-                    <td className="px-5 py-3.5 font-mono text-sm font-semibold text-text-primary">
-                      {formatCurrency(inv.current_value, inv.currency)}
-                    </td>
-                    <td className="px-5 py-3.5 font-mono text-sm">
-                      <span className={isGain ? 'text-gain' : 'text-loss'}>
-                        {isGain ? '+' : ''}{formatCurrency(inv.pnl_absolute, inv.currency)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <PnlBadge value={inv.pnl_percent} size="sm" />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link href={`/investments/${inv.id}`}
-                        className="text-text-muted group-hover:text-brand transition-colors">
-                        <ChevronRight size={16} />
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
+            {active.map(inv => {
+              const isGain = inv.pnl_absolute >= 0
+              return (
+                <tr key={inv.id} className="hover:bg-bg-elevated/50 transition-colors group">
+                  <td className="px-5 py-3.5">
+                    <div className="font-medium text-sm text-text-primary">{inv.name}</div>
+                    {inv.ticker && (
+                      <div className="text-xs text-text-muted font-mono mt-0.5">{inv.ticker}</div>
+                    )}
+                    {inv.total_units !== null && (
+                      <div className="text-xs text-text-muted mt-0.5">
+                        {formatUnits(inv.total_units)} unidades
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <TypeBadge type={inv.type} size="sm" />
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-sm text-text-secondary">
+                    {formatCurrency(inv.total_invested, inv.currency)}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-sm font-semibold text-text-primary">
+                    {formatCurrency(inv.current_value, inv.currency)}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-sm">
+                    <span className={isGain ? 'text-gain' : 'text-loss'}>
+                      {isGain ? '+' : ''}{formatCurrency(inv.pnl_absolute, inv.currency)}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <PnlBadge value={inv.pnl_percent} size="sm" />
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <Link href={`/investments/${inv.id}`}
+                      className="text-text-muted group-hover:text-brand transition-colors">
+                      <ChevronRight size={16} />
+                    </Link>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
