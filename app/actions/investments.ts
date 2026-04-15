@@ -1,8 +1,15 @@
 'use server'
 
+import { createHmac } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import type { InvestmentType, Currency } from '@/types'
+
+function hashUserId(uid: string): string {
+  const seed = process.env.HASH_SEED
+  if (!seed) throw new Error('HASH_SEED env var not set')
+  return createHmac('sha256', seed).update(uid).digest('hex')
+}
 
 export interface CreateInvestmentInput {
   name: string
@@ -22,7 +29,7 @@ export async function createInvestment(data: CreateInvestmentInput) {
   const { error, data: created } = await supabase
     .from('investments')
     .insert({
-      user_id: user.id,
+      user_id: hashUserId(user.id),
       name: data.name,
       type: data.type,
       ticker: data.ticker || null,
